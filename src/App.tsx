@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 /* eslint-disable no-case-declarations */
 import React, { useState, useRef } from 'react';
 import './App.css';
@@ -197,32 +198,41 @@ function App() {
   const processImportedFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
+  
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
       try {
-        let importedStudents: Student[] = [];
+        const importedStudents: Student[] = [];
+        const invalidStudents: Student[] = [];
         const format = file.name.split('.').pop() as 'txt' | 'csv' | 'xml' | 'json';
         
         switch (format) {
           case 'txt':
-            importedStudents = content.trim().split('\n').map(line => {
+            const txtStudents = content.trim().split('\n').map(line => {
               const [nombre, codigo, fechaIngreso, direccion, telefonoFijo, telefonoCelular, correoElectronico] = line.split('\t');
               return { nombre, codigo, fechaIngreso, direccion, telefonoFijo, telefonoCelular, correoElectronico };
+            });
+
+            txtStudents.forEach(student => {
+              isValidStudent(student) ? importedStudents.push(student) : invalidStudents.push(student);
             });
             break;
           
           case 'csv':
             const lines = content.trim().split('\n');
             const headers = lines[0].split(',') as Array<keyof Student>;
-            importedStudents = lines.slice(1).map(line => {
+            const csvStudents = lines.slice(1).map(line => {
               const values = line.split(',');
               const student = {} as Student;
               headers.forEach((header, index) => {
                 student[header] = values[index];
               });
               return student;
+            });
+
+            csvStudents.forEach(student => {
+              isValidStudent(student) ? importedStudents.push(student) : invalidStudents.push(student);
             });
             break;
           
@@ -242,17 +252,28 @@ function App() {
                 }
               });
               
-              importedStudents.push(student);
+              isValidStudent(student) ? importedStudents.push(student) : invalidStudents.push(student);
             }
             break;
           
           case 'json':
-            importedStudents = JSON.parse(content);
+            const jsonStudents = JSON.parse(content);
+            jsonStudents.forEach((student: Student) => {
+              isValidStudent(student) ? importedStudents.push(student) : invalidStudents.push(student);
+            });
             break;
         }
         
-        setStudents(prev => [...prev, ...importedStudents]);
-        alert(`Se importaron ${importedStudents.length} estudiantes`);
+        if (importedStudents.length > 0) {
+          setStudents(prev => [...prev, ...importedStudents]);
+        }
+        
+        if (invalidStudents.length > 0) {
+          alert(`Se importaron ${importedStudents.length} estudiantes válidos. ${invalidStudents.length} estudiantes fueron rechazados por tener datos inválidos.`);
+          console.error("Estudiantes con datos inválidos:", invalidStudents);
+        } else {
+          alert(`Se importaron ${importedStudents.length} estudiantes correctamente.`);
+        }
       } catch (error) {
         console.error("Error al importar:", error);
         alert("Error al importar el archivo. Verifique el formato.");
@@ -262,8 +283,19 @@ function App() {
     reader.readAsText(file);
     e.target.value = '';
   };
+  
+  const isValidStudent = (student: Student): boolean => {
+    for (const field of Object.keys(student) as Array<keyof Student>) {
+      const value = student[field];
+      const pattern = regexPatterns[field];
+      
+      if (!pattern.test(value)) {
+        return false;
+      }
+    }
+    return true;
+  };
 
-  // Renderizado condicional para vista móvil
   const renderMobileView = () => {
     return (
       <>
@@ -477,7 +509,6 @@ function App() {
       </header>
       
       <main>
-        {/* Usar renderizado condicional basado en tamaño de pantalla */}
         {window.innerWidth < 768 ? renderMobileView() : renderDesktopView()}
       </main>
     </div>
