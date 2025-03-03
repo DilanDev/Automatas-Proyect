@@ -1,7 +1,8 @@
-/* eslint-disable no-useless-escape */
+/* eslint-disable no-case-declarations */
 import React, { useState, useRef } from 'react';
 import './App.css';
 
+// Definición de tipos para nuestro estudiante
 type Student = {
   nombre: string;
   codigo: string;
@@ -12,20 +13,23 @@ type Student = {
   correoElectronico: string;
 };
 
+// Tipo para errores de validación
 type ValidationErrors = {
   [key in keyof Student]?: string;
 };
 
+// Expresiones regulares para validación
 const regexPatterns = {
   nombre: /^[A-Za-zÁáÉéÍíÓóÚúÑñ\s]+$/,
   codigo: /^[1-9]\d{7}$/,
   fechaIngreso: /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/,
-  direccion: /^[A-Za-z0-9\s#\-]+$/,
+  direccion: /^[A-Za-z0-9\s#\\-]+$/,
   telefonoFijo: /^6056\d{6}$/,
   telefonoCelular: /^3\d{9}$/,
   correoElectronico: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 };
 
+// Mensajes de error para cada campo
 const errorMessages = {
   nombre: "El nombre debe contener solo letras y espacios.",
   codigo: "El código debe tener 8 dígitos y no empezar con 0.",
@@ -37,6 +41,7 @@ const errorMessages = {
 };
 
 function App() {
+  // Estado para el formulario
   const [formData, setFormData] = useState<Student>({
     nombre: '',
     codigo: '',
@@ -47,11 +52,19 @@ function App() {
     correoElectronico: ''
   });
 
-
+  // Estado para los estudiantes almacenados
   const [students, setStudents] = useState<Student[]>([]);
+
+  // Estado para errores de validación
   const [errors, setErrors] = useState<ValidationErrors>({});
+
+  // Estado para manejar visualización en móviles
+  const [activeTab, setActiveTab] = useState<'form' | 'data'>('form');
+
+  // Referencia para el input de importación
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Manejar cambios en los campos del formulario
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -59,9 +72,11 @@ function App() {
       [name]: value
     }));
 
+    // Validar el campo mientras se escribe
     validateField(name as keyof Student, value);
   };
 
+  // Función para validar un campo específico
   const validateField = (field: keyof Student, value: string): boolean => {
     const pattern = regexPatterns[field];
     const isValid = pattern.test(value);
@@ -74,6 +89,7 @@ function App() {
     return isValid;
   };
 
+  // Validar todo el formulario
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
     let isValid = true;
@@ -92,12 +108,15 @@ function App() {
     return isValid;
   };
 
+  // Manejar el envío del formulario
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (validateForm()) {
+      // Agregar el estudiante al array
       setStudents(prev => [...prev, { ...formData }]);
       
+      // Limpiar el formulario
       setFormData({
         nombre: '',
         codigo: '',
@@ -109,6 +128,11 @@ function App() {
       });
       
       alert('Estudiante agregado correctamente');
+      
+      // En dispositivos móviles, cambiar a la pestaña de datos después de agregar
+      if (window.innerWidth < 768) {
+        setActiveTab('data');
+      }
     } else {
       alert('Por favor corrija los errores en el formulario');
     }
@@ -135,14 +159,15 @@ function App() {
         break;
       
       case 'excel':
-        { const headers = Object.keys(students[0]).join(',');
+        // CSV para Excel
+        const headers = Object.keys(students[0]).join(',');
         const rows = students.map(student => 
           Object.values(student).join(',')
         ).join('\n');
         content = `${headers}\n${rows}`;
         filename += 'csv';
         mimeType = 'text/csv';
-        break; }
+        break;
       
       case 'xml':
         content = '<?xml version="1.0" encoding="UTF-8"?>\n<students>\n';
@@ -165,6 +190,7 @@ function App() {
         break;
     }
 
+    // Crear y descargar el archivo
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -176,6 +202,7 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  // Importar datos
   const handleImport = (format: 'text' | 'excel' | 'xml' | 'json') => {
     if (fileInputRef.current) {
       fileInputRef.current.accept = format === 'text' ? '.txt' :
@@ -185,6 +212,7 @@ function App() {
     }
   };
 
+  // Procesar archivo importado
   const processImportedFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -205,7 +233,7 @@ function App() {
             break;
           
           case 'csv':
-            { const lines = content.trim().split('\n');
+            const lines = content.trim().split('\n');
             const headers = lines[0].split(',') as Array<keyof Student>;
             importedStudents = lines.slice(1).map(line => {
               const values = line.split(',');
@@ -215,10 +243,11 @@ function App() {
               });
               return student;
             });
-            break; }
+            break;
           
           case 'xml':
-            { const parser = new DOMParser();
+            // Parsing XML básico
+            const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(content, "text/xml");
             const studentNodes = xmlDoc.getElementsByTagName("student");
             
@@ -235,7 +264,7 @@ function App() {
               
               importedStudents.push(student);
             }
-            break; }
+            break;
           
           case 'json':
             importedStudents = JSON.parse(content);
@@ -251,132 +280,168 @@ function App() {
     };
     
     reader.readAsText(file);
-    e.target.value = '';
+    e.target.value = ''; // Resetear el input file
   };
 
-  return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Registro de Estudiantes</h1>
-      </header>
-      
-      <main>
-        <section className="form-section">
-          <h2>Formulario de Registro</h2>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="nombre">Nombre Completo:</label>
-              <input
-                type="text"
-                id="nombre"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleChange}
-                className={errors.nombre ? 'error' : ''}
-              />
-              {errors.nombre && <span className="error-message">{errors.nombre}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="codigo">Código de Estudiante:</label>
-              <input
-                type="text"
-                id="codigo"
-                name="codigo"
-                value={formData.codigo}
-                onChange={handleChange}
-                className={errors.codigo ? 'error' : ''}
-              />
-              {errors.codigo && <span className="error-message">{errors.codigo}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="fechaIngreso">Fecha de Ingreso (DD/MM/YYYY):</label>
-              <input
-                type="text"
-                id="fechaIngreso"
-                name="fechaIngreso"
-                value={formData.fechaIngreso}
-                onChange={handleChange}
-                placeholder="DD/MM/YYYY"
-                className={errors.fechaIngreso ? 'error' : ''}
-              />
-              {errors.fechaIngreso && <span className="error-message">{errors.fechaIngreso}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="direccion">Dirección:</label>
-              <input
-                type="text"
-                id="direccion"
-                name="direccion"
-                value={formData.direccion}
-                onChange={handleChange}
-                className={errors.direccion ? 'error' : ''}
-              />
-              {errors.direccion && <span className="error-message">{errors.direccion}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="telefonoFijo">Teléfono Fijo:</label>
-              <input
-                type="text"
-                id="telefonoFijo"
-                name="telefonoFijo"
-                value={formData.telefonoFijo}
-                onChange={handleChange}
-                placeholder="6056XXXXXX"
-                className={errors.telefonoFijo ? 'error' : ''}
-              />
-              {errors.telefonoFijo && <span className="error-message">{errors.telefonoFijo}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="telefonoCelular">Teléfono Celular:</label>
-              <input
-                type="text"
-                id="telefonoCelular"
-                name="telefonoCelular"
-                value={formData.telefonoCelular}
-                onChange={handleChange}
-                placeholder="3XXXXXXXXX"
-                className={errors.telefonoCelular ? 'error' : ''}
-              />
-              {errors.telefonoCelular && <span className="error-message">{errors.telefonoCelular}</span>}
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="correoElectronico">Correo Electrónico:</label>
-              <input
-                type="text"
-                id="correoElectronico"
-                name="correoElectronico"
-                value={formData.correoElectronico}
-                onChange={handleChange}
-                className={errors.correoElectronico ? 'error' : ''}
-              />
-              {errors.correoElectronico && <span className="error-message">{errors.correoElectronico}</span>}
-            </div>
-            
-            <button type="submit" className="submit-btn">Registrar Estudiante</button>
-          </form>
-        </section>
+  // Renderizado condicional para vista móvil
+  const renderMobileView = () => {
+    return (
+      <>
+        <div className="mobile-tabs">
+          <button 
+            className={`tab-button ${activeTab === 'form' ? 'active' : ''}`}
+            onClick={() => setActiveTab('form')}
+          >
+            Formulario
+          </button>
+          <button 
+            className={`tab-button ${activeTab === 'data' ? 'active' : ''}`}
+            onClick={() => setActiveTab('data')}
+          >
+            Datos ({students.length})
+          </button>
+        </div>
         
-        <section className="data-section">
-          <h2>Estudiantes Registrados</h2>
-          {students.length === 0 ? (
-            <p>No hay estudiantes registrados.</p>
-          ) : (
+        {activeTab === 'form' ? renderFormSection() : renderDataSection()}
+      </>
+    );
+  };
+
+  // Renderizado para vista desktop
+  const renderDesktopView = () => {
+    return (
+      <>
+        {renderFormSection()}
+        {renderDataSection()}
+      </>
+    );
+  };
+
+  // Renderizar sección de formulario
+  const renderFormSection = () => {
+    return (
+      <section className="form-section">
+        <h2>Formulario de Registro</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="nombre">Nombre Completo:</label>
+            <input
+              type="text"
+              id="nombre"
+              name="nombre"
+              value={formData.nombre}
+              onChange={handleChange}
+              className={errors.nombre ? 'error' : ''}
+            />
+            {errors.nombre && <span className="error-message">{errors.nombre}</span>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="codigo">Código de Estudiante:</label>
+            <input
+              type="text"
+              id="codigo"
+              name="codigo"
+              value={formData.codigo}
+              onChange={handleChange}
+              className={errors.codigo ? 'error' : ''}
+            />
+            {errors.codigo && <span className="error-message">{errors.codigo}</span>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="fechaIngreso">Fecha de Ingreso (DD/MM/YYYY):</label>
+            <input
+              type="text"
+              id="fechaIngreso"
+              name="fechaIngreso"
+              value={formData.fechaIngreso}
+              onChange={handleChange}
+              placeholder="DD/MM/YYYY"
+              className={errors.fechaIngreso ? 'error' : ''}
+            />
+            {errors.fechaIngreso && <span className="error-message">{errors.fechaIngreso}</span>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="direccion">Dirección:</label>
+            <input
+              type="text"
+              id="direccion"
+              name="direccion"
+              value={formData.direccion}
+              onChange={handleChange}
+              className={errors.direccion ? 'error' : ''}
+            />
+            {errors.direccion && <span className="error-message">{errors.direccion}</span>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="telefonoFijo">Teléfono Fijo:</label>
+            <input
+              type="text"
+              id="telefonoFijo"
+              name="telefonoFijo"
+              value={formData.telefonoFijo}
+              onChange={handleChange}
+              placeholder="6056XXXXXX"
+              className={errors.telefonoFijo ? 'error' : ''}
+            />
+            {errors.telefonoFijo && <span className="error-message">{errors.telefonoFijo}</span>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="telefonoCelular">Teléfono Celular:</label>
+            <input
+              type="text"
+              id="telefonoCelular"
+              name="telefonoCelular"
+              value={formData.telefonoCelular}
+              onChange={handleChange}
+              placeholder="3XXXXXXXXX"
+              className={errors.telefonoCelular ? 'error' : ''}
+            />
+            {errors.telefonoCelular && <span className="error-message">{errors.telefonoCelular}</span>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="correoElectronico">Correo Electrónico:</label>
+            <input
+              type="text"
+              id="correoElectronico"
+              name="correoElectronico"
+              value={formData.correoElectronico}
+              onChange={handleChange}
+              className={errors.correoElectronico ? 'error' : ''}
+            />
+            {errors.correoElectronico && <span className="error-message">{errors.correoElectronico}</span>}
+          </div>
+          
+          <button type="submit" className="submit-btn">Registrar Estudiante</button>
+        </form>
+      </section>
+    );
+  };
+
+  // Renderizar sección de datos
+  const renderDataSection = () => {
+    return (
+      <section className="data-section">
+        <h2>Estudiantes Registrados</h2>
+        {students.length === 0 ? (
+          <p>No hay estudiantes registrados.</p>
+        ) : (
+          <div className="table-container">
             <table>
               <thead>
                 <tr>
                   <th>Nombre</th>
                   <th>Código</th>
-                  <th>Fecha de Ingreso</th>
+                  <th>Fecha</th>
                   <th>Dirección</th>
-                  <th>Teléfono Fijo</th>
-                  <th>Teléfono Celular</th>
-                  <th>Correo Electrónico</th>
+                  <th>Tel. Fijo</th>
+                  <th>Celular</th>
+                  <th>Correo</th>
                 </tr>
               </thead>
               <tbody>
@@ -393,36 +458,49 @@ function App() {
                 ))}
               </tbody>
             </table>
-          )}
-          
-          <div className="export-import-section">
-            <div className="export-section">
-              <h3>Exportar Datos</h3>
-              <div className="button-group">
-                <button onClick={() => handleExport('text')}>Texto (.txt)</button>
-                <button onClick={() => handleExport('excel')}>Excel (.csv)</button>
-                <button onClick={() => handleExport('xml')}>XML</button>
-                <button onClick={() => handleExport('json')}>JSON</button>
-              </div>
-            </div>
-            
-            <div className="import-section">
-              <h3>Importar Datos</h3>
-              <div className="button-group">
-                <button onClick={() => handleImport('text')}>Texto (.txt)</button>
-                <button onClick={() => handleImport('excel')}>Excel (.csv)</button>
-                <button onClick={() => handleImport('xml')}>XML</button>
-                <button onClick={() => handleImport('json')}>JSON</button>
-              </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                style={{ display: 'none' }}
-                onChange={processImportedFile}
-              />
+          </div>
+        )}
+        
+        <div className="export-import-section">
+          <div className="export-section">
+            <h3>Exportar Datos</h3>
+            <div className="button-group">
+              <button onClick={() => handleExport('text')}>Texto (.txt)</button>
+              <button onClick={() => handleExport('excel')}>Excel (.csv)</button>
+              <button onClick={() => handleExport('xml')}>XML</button>
+              <button onClick={() => handleExport('json')}>JSON</button>
             </div>
           </div>
-        </section>
+          
+          <div className="import-section">
+            <h3>Importar Datos</h3>
+            <div className="button-group">
+              <button onClick={() => handleImport('text')}>Texto (.txt)</button>
+              <button onClick={() => handleImport('excel')}>Excel (.csv)</button>
+              <button onClick={() => handleImport('xml')}>XML</button>
+              <button onClick={() => handleImport('json')}>JSON</button>
+            </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={processImportedFile}
+            />
+          </div>
+        </div>
+      </section>
+    );
+  };
+
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>Registro de Estudiantes</h1>
+      </header>
+      
+      <main>
+        {/* Usar renderizado condicional basado en tamaño de pantalla */}
+        {window.innerWidth < 768 ? renderMobileView() : renderDesktopView()}
       </main>
     </div>
   );
