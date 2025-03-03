@@ -2,7 +2,6 @@
 import React, { useState, useRef } from 'react';
 import './App.css';
 
-// Definición de tipos para nuestro estudiante
 type Student = {
   nombre: string;
   codigo: string;
@@ -13,7 +12,7 @@ type Student = {
   correoElectronico: string;
 };
 
-// Tipo para errores de validación
+
 type ValidationErrors = {
   [key in keyof Student]?: string;
 };
@@ -29,7 +28,6 @@ const regexPatterns = {
   correoElectronico: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 };
 
-// Mensajes de error para cada campo
 const errorMessages = {
   nombre: "El nombre debe contener solo letras y espacios.",
   codigo: "El código debe tener 8 dígitos y no empezar con 0.",
@@ -41,7 +39,6 @@ const errorMessages = {
 };
 
 function App() {
-  // Estado para el formulario
   const [formData, setFormData] = useState<Student>({
     nombre: '',
     codigo: '',
@@ -52,19 +49,12 @@ function App() {
     correoElectronico: ''
   });
 
-  // Estado para los estudiantes almacenados
+
   const [students, setStudents] = useState<Student[]>([]);
-
-  // Estado para errores de validación
   const [errors, setErrors] = useState<ValidationErrors>({});
-
-  // Estado para manejar visualización en móviles
   const [activeTab, setActiveTab] = useState<'form' | 'data'>('form');
-
-  // Referencia para el input de importación
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Manejar cambios en los campos del formulario
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -72,11 +62,9 @@ function App() {
       [name]: value
     }));
 
-    // Validar el campo mientras se escribe
     validateField(name as keyof Student, value);
   };
 
-  // Función para validar un campo específico
   const validateField = (field: keyof Student, value: string): boolean => {
     const pattern = regexPatterns[field];
     const isValid = pattern.test(value);
@@ -89,7 +77,6 @@ function App() {
     return isValid;
   };
 
-  // Validar todo el formulario
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
     let isValid = true;
@@ -108,15 +95,12 @@ function App() {
     return isValid;
   };
 
-  // Manejar el envío del formulario
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (validateForm()) {
-      // Agregar el estudiante al array
       setStudents(prev => [...prev, { ...formData }]);
       
-      // Limpiar el formulario
       setFormData({
         nombre: '',
         codigo: '',
@@ -129,7 +113,6 @@ function App() {
       
       alert('Estudiante agregado correctamente');
       
-      // En dispositivos móviles, cambiar a la pestaña de datos después de agregar
       if (window.innerWidth < 768) {
         setActiveTab('data');
       }
@@ -159,7 +142,6 @@ function App() {
         break;
       
       case 'excel':
-        // CSV para Excel
         const headers = Object.keys(students[0]).join(',');
         const rows = students.map(student => 
           Object.values(student).join(',')
@@ -190,7 +172,6 @@ function App() {
         break;
     }
 
-    // Crear y descargar el archivo
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -246,7 +227,6 @@ function App() {
             break;
           
           case 'xml':
-            // Parsing XML básico
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(content, "text/xml");
             const studentNodes = xmlDoc.getElementsByTagName("student");
@@ -280,7 +260,7 @@ function App() {
     };
     
     reader.readAsText(file);
-    e.target.value = ''; // Resetear el input file
+    e.target.value = '';
   };
 
   // Renderizado condicional para vista móvil
@@ -307,7 +287,6 @@ function App() {
     );
   };
 
-  // Renderizado para vista desktop
   const renderDesktopView = () => {
     return (
       <>
@@ -317,7 +296,6 @@ function App() {
     );
   };
 
-  // Renderizar sección de formulario
   const renderFormSection = () => {
     return (
       <section className="form-section">
